@@ -1,3 +1,3 @@
-describe("FileReader", () => {
-  it("reads a file from a path", () => {});
-});
+describe('FileReader', () => {
+  it('reads a file from a path', () => {})
+})

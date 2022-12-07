@@ -1,6 +1,6 @@
 export class FileReader {
-  path: string;
+  path: string
   constructor(path: string) {
-    this.path = path;
+    this.path = path
   }
 }

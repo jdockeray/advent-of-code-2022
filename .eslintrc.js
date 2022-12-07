@@ -4,11 +4,11 @@ module.exports = {
     commonjs: true,
     es2021: true,
   },
-  extends: "standard-with-typescript",
+  extends: ['standard-with-typescript', 'prettier'],
   overrides: [],
   parserOptions: {
-    project: "./tsconfig.json",
-    ecmaVersion: "latest",
+    project: './tsconfig.json',
+    ecmaVersion: 'latest',
   },
   rules: {},
-};
+}
