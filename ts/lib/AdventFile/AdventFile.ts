@@ -1,6 +1,5 @@
 import { LineReader } from './LineReader'
 import fs from 'fs'
-import path from 'path'
 export class AdventFile {
   path: string
   constructor(path: string) {
@@ -8,7 +7,7 @@ export class AdventFile {
   }
 
   readLines(): LineReader {
-    const body = fs.readFileSync(path.resolve(__dirname, this.path), 'utf8')
+    const body = fs.readFileSync(this.path, 'utf8')
     const lines = body.split('\n')
     return new LineReader(lines)
   }
