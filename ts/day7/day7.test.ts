@@ -1,18 +1,20 @@
 import {
-  postOrder,
+  Cd,
   Instruction,
+  Ls,
+  mapFileSystem,
+  FileSystem,
   parseDirGroup,
   parseInstruction,
   parseInstructions,
   parseLsGroup,
-  TreeNode,
 } from './day7'
 
 describe('parseDirGroup', () => {
   it.each<[string[], Instruction]>([
-    [['$ cd a'], new Instruction('cd', 'a')],
-    [['$ cd ..'], new Instruction('cd', '..')],
-    [['$ cd /'], new Instruction('cd', '/')],
+    [['$ cd a'], new Cd('cd', 'a')],
+    [['$ cd ..'], new Cd('cd', '..')],
+    [['$ cd /'], new Cd('cd', '/')],
   ])('%j should return %o', (input, expected) => {
     expect(parseDirGroup(input)).toEqual(expected)
   })
@@ -22,27 +24,28 @@ describe('parseLsGroup', () => {
   it.each<[string[], Instruction]>([
     [
       ['$ ls', '176441 dcgvw', '9961 grcj.sdl'],
-      new Instruction('ls', [
+      new Ls('ls', [
         ['dcgvw', 176441],
         ['grcj.sdl', 9961],
       ]),
     ],
-    [['$ ls', '9961 grcj.sdl'], new Instruction('ls', [['grcj.sdl', 9961]])],
+    [['$ ls', '9961 grcj.sdl'], new Ls('ls', [['grcj.sdl', 9961]])],
+    [['$ ls', 'dir dcqf'], new Ls('ls', [['dcqf', null]])],
   ])('%j should return %o', (input, expected) => {
     expect(parseLsGroup(input)).toEqual(expected)
   })
 })
 describe('parseInstruction', () => {
   it.each<[string[], Instruction]>([
-    [['$ cd mfmps'], new Instruction('cd', 'mfmps')],
+    [['$ cd mfmps'], new Cd('cd', 'mfmps')],
     [
       ['$ ls', '176441 dcgvw', '9961 grcj.sdl'],
-      new Instruction('ls', [
+      new Ls('ls', [
         ['dcgvw', 176441],
         ['grcj.sdl', 9961],
       ]),
     ],
-    [['$ ls', 'dir mfmps'], new Instruction('ls', [['mfmps', null]])],
+    [['$ ls', 'dir mfmps'], new Ls('ls', [['mfmps', null]])],
   ])('%j should return %o', (input, expected) => {
     expect(parseInstruction(input)).toEqual(expected)
   })
@@ -53,9 +56,9 @@ describe('parseInstructions', () => {
       ['$ cd mfmps'],
       ['$ ls', '176441 dcgvw', '9961 grcj.sdl'],
     ])
-    expect(instructions[0]).toEqual(new Instruction('cd', 'mfmps'))
+    expect(instructions[0]).toEqual(new Cd('cd', 'mfmps'))
     expect(instructions[1]).toEqual(
-      new Instruction('ls', [
+      new Ls('ls', [
         ['dcgvw', 176441],
         ['grcj.sdl', 9961],
       ])
@@ -63,129 +66,102 @@ describe('parseInstructions', () => {
   })
 })
 
-describe('TreeNode - changeDir', () => {
-  it('goes up one level when command is ..', () => {
-    const tree = new TreeNode(['/', null])
-    tree.leftMostChild = new TreeNode(['child', null])
-    tree.leftMostChild.parent = tree
-
-    const cmd = new Instruction('cd', '..')
-
-    const after = tree.leftMostChild.changeDir(cmd)
-    expect(after?.data).toEqual(['/', null])
+describe('map file system', () => {
+  it('builds a map of the file system', () => {
+    const mappedFileSystem = mapFileSystem([])
+    expect(mappedFileSystem.get('/')).toEqual({
+      files: [],
+      folders: [],
+    })
   })
-  it('goes up to root when command is /', () => {
-    const parent = new TreeNode(['/', null])
-    parent.leftMostChild = new TreeNode(['child', null])
-    const child = parent.leftMostChild
-    child.leftMostChild = new TreeNode(['grandchild', null])
-    child.parent = parent
-    const grandchild = child.leftMostChild
-    grandchild.parent = child
-
-    const cmd = new Instruction('cd', '/')
-
-    const after = grandchild.changeDir(cmd)
-    expect(after?.data).toEqual(['/', null])
+  it('handles the first command', () => {
+    const mappedFileSystem = mapFileSystem([new Cd('cd', '/')])
+    expect(mappedFileSystem.get('/')).toEqual({
+      files: [],
+      folders: [],
+    })
   })
+  it('can create new directories', () => {
+    const instructions = [new Cd('cd', '/'), new Ls('ls', [['a', null]])]
+    const mappedFileSystem = mapFileSystem(instructions)
 
-  it('gets right sibling', () => {
-    const parent = new TreeNode(['/', null])
-    parent.rightSibling = new TreeNode(['middle', null])
-    const cmd = new Instruction('cd', 'middle')
-    expect(parent.changeDir(cmd)?.data).toEqual(['middle', null])
+    expect(mappedFileSystem.get('/:a')).toEqual({ files: [], folders: [] })
   })
-})
-describe('TreeNode - ls', () => {
-  it('adds files', () => {
-    const parent = new TreeNode(['/', null])
+  it('can create new files', () => {
+    const instructions = [new Cd('cd', '/'), new Ls('ls', [['a', 123]])]
+    const mappedFileSystem = mapFileSystem(instructions)
 
-    const cmd = new Instruction('ls', [
-      ['b.txt', 176441],
-      ['c.dat', 9961],
-    ])
-    parent.ls(cmd)
-
-    expect(parent.rightSibling?.data).toEqual(['b.txt', 176441])
-    expect(parent.rightSibling?.rightSibling?.data).toEqual(['c.dat', 9961])
+    expect(mappedFileSystem.get('/')).toEqual(new FileSystem([['a', 123]]))
   })
-  it('adds dirs', () => {
-    const parent = new TreeNode(['/', null])
+  it('can change directory and create files', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [['abc', 123]]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
 
-    const cmd = new Instruction('ls', [
-      ['b', null],
-      ['c', null],
-    ])
-    parent.ls(cmd)
-
-    expect(parent.rightSibling?.data).toEqual(['b', null])
-    expect(parent.rightSibling?.rightSibling?.data).toEqual(['c', null])
+    expect(mappedFileSystem.get('/:a')).toEqual(new FileSystem([['abc', 123]]))
   })
-  it('adds files and dirs', () => {
-    const parent = new TreeNode(['/', null])
+  it('does not overwrite exisiting directories', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [['abc', 123]]),
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
 
-    const cmd = new Instruction('ls', [
-      ['b', null],
-      ['b.txt', 176441],
-    ])
-    parent.ls(cmd)
-
-    expect(parent.rightSibling?.data).toEqual(['b', null])
-    expect(parent.rightSibling?.rightSibling?.data).toEqual(['b.txt', 176441])
+    expect(mappedFileSystem.get('/:a')).toEqual(new FileSystem([['abc', 123]]))
   })
-})
-
-describe.only('Post order', () => {
-  it('gets the size of one child', () => {
-    const parent = new TreeNode(['e', null])
-    parent.leftMostChild = new TreeNode(['i', 584])
-    parent.leftMostChild.parent = parent
-
-    expect(postOrder(parent)).toBe(584)
+  it('can create many directory chained by name', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [['b', null]]),
+      new Cd('cd', 'b'),
+      new Ls('ls', [['c', null]]),
+      new Cd('cd', 'c'),
+      new Ls('ls', [['d', null]]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+    expect(mappedFileSystem.get('/:a:b:c:d')).toEqual(new FileSystem())
   })
-  it('gets the size of a nested dir', () => {
-    const parent = new TreeNode(['e', null])
-    parent.leftMostChild = new TreeNode(['i', 10])
-
-    const child = parent.leftMostChild
-
-    child.leftMostChild = new TreeNode(['x', 10])
-    child.parent = parent
-    child.leftMostChild.parent = child
-
-    expect(postOrder(parent)).toBe(20)
-  })
-  it.only('gets the size of a nested dir and siblings', () => {
-    const parent = new TreeNode(['e', null])
-    parent.leftMostChild = new TreeNode(['i', 10])
-
-    const child = parent.leftMostChild
-
-    child.leftMostChild = new TreeNode(['x', 10])
-    child.parent = parent
-
-    const grandchild = child.leftMostChild
-    grandchild.rightSibling = new TreeNode(['y', 10])
-    grandchild.parent = child
-
-    expect(postOrder(parent)).toBe(30)
+  it('can go up one dir when command is ..', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [['b', null]]),
+      new Cd('cd', 'b'),
+      new Cd('cd', '..'),
+      new Ls('ls', [['c', null]]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+    expect(mappedFileSystem.get('/:a:c')).toEqual(new FileSystem())
   })
 
-  it('gets the size of child siblings', () => {
-    const parent = new TreeNode(['e', null])
-    parent.leftMostChild = new TreeNode(['i', 10])
-    const child = parent.leftMostChild
-    child.rightSibling = new TreeNode(['x', 10])
-    child.parent = parent
-    child.rightSibling.parent = parent
-
-    expect(postOrder(parent)).toBe(20)
-  })
-
-  it('gets the size of direct siblings', () => {
-    const parent = new TreeNode(['e', null])
-    parent.rightSibling = new TreeNode(['i', 10])
-
-    expect(postOrder(parent)).toBe(10)
+  it('stops at / when command is ..', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [['b', null]]),
+      new Cd('cd', 'b'),
+      new Cd('cd', '..'),
+      new Cd('cd', '..'),
+      new Cd('cd', '..'),
+      new Cd('cd', '..'),
+      new Cd('cd', '..'),
+      new Cd('cd', '..'),
+      new Cd('cd', '..'),
+      new Ls('ls', [['b', null]]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+    expect(mappedFileSystem.get('/:b')).toEqual(new FileSystem())
   })
 })
