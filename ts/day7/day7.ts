@@ -3,13 +3,6 @@ import { AdventFile } from '../lib/AdventFile'
 
 export type Command = 'cd' | 'ls'
 export type Args = string | Array<[string, number] | [string, null]>
-// export abstract class Instruction {
-//   command: Command
-//   abstract kind: string
-//   constructor(command: Command) {
-//     this.command = command
-//   }
-// }
 
 export class Cd {
   kind: 'cd' = 'cd'
@@ -136,11 +129,65 @@ export const mapFileSystem = (
   return dirMap
 }
 
+export const getFolderSize = (
+  key: string,
+  dirMap: Map<string, FileSystem>
+): number => {
+  const node = dirMap.get(key)
+  if (node === undefined) {
+    throw new Error(`dir: ${key} should be defined`)
+  }
+  const sumOfFiles = node.files.reduce((pv, cv) => pv + cv[1], 0)
+
+  const sumOfFolders = node.folders.reduce(
+    (pv, cv) => pv + getFolderSize(cv, dirMap),
+    0
+  )
+
+  return sumOfFiles + sumOfFolders
+}
+
+export const sizeOfDirectoryToDelete = (
+  dirMap: Map<string, FileSystem>
+): number => {
+  const rootFolderSize = getFolderSize('/', dirMap)
+  const MAX_SPACE = 70000000
+  const MEMORY_REQUIRED = 30000000
+  let nominee = null
+  for (const key of dirMap.keys()) {
+    const folderSize = getFolderSize(key, dirMap)
+    const isCandidate =
+      MAX_SPACE - (rootFolderSize - folderSize) > MEMORY_REQUIRED
+    if (isCandidate) {
+      if (nominee === null || folderSize < nominee) {
+        nominee = folderSize
+      }
+    }
+  }
+  if (nominee === null) {
+    throw new Error('no candidates to delete')
+  }
+  return nominee
+}
+
+export const sumOfValidFolders = (dirMap: Map<string, FileSystem>): number => {
+  let sum = 0
+  for (const key of dirMap.keys()) {
+    const folderSize = getFolderSize(key, dirMap)
+    if (folderSize <= 100000) {
+      sum = sum + folderSize
+    }
+  }
+  return sum
+}
+
 if (process.env.NODE_ENV !== 'test') {
-  const file = new AdventFile(path.resolve(__dirname, 'test.input.txt'))
+  const file = new AdventFile(path.resolve(__dirname, 'input.txt'))
   const groups = file.readLines().group((str) => str.charAt(0) === '$')
 
   const instructions = parseInstructions(groups)
+  const fileTree = mapFileSystem(instructions)
 
-  console.log(mapFileSystem(instructions))
+  console.log(sumOfValidFolders(fileTree))
+  console.log(sizeOfDirectoryToDelete(fileTree))
 }

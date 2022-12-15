@@ -8,6 +8,9 @@ import {
   parseInstruction,
   parseInstructions,
   parseLsGroup,
+  getFolderSize,
+  sumOfValidFolders,
+  sizeOfDirectoryToDelete,
 } from './day7'
 
 describe('parseDirGroup', () => {
@@ -163,5 +166,144 @@ describe('map file system', () => {
     ]
     const mappedFileSystem = mapFileSystem(instructions)
     expect(mappedFileSystem.get('/:b')).toEqual(new FileSystem())
+  })
+})
+
+describe('get folder size', () => {
+  it('sums the size of the files', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+      ]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+
+    expect(getFolderSize('/:a', mappedFileSystem)).toBe(30)
+  })
+  it('sums the size of one of the folders', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+      ]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+
+    expect(getFolderSize('/', mappedFileSystem)).toBe(30)
+  })
+  it('sums the size of adjacent folders', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+      ]),
+      new Cd('cd', '..'),
+      new Ls('ls', [['b', null]]),
+      new Cd('cd', 'b'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+      ]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+
+    expect(getFolderSize('/', mappedFileSystem)).toBe(60)
+  })
+
+  it('sums the size of nested folders', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [['a', null]]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+        ['d', null],
+      ]),
+      new Cd('cd', 'd'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+        ['e', null],
+      ]),
+      new Cd('cd', 'e'),
+      new Ls('ls', [
+        ['a', 10],
+        ['b', 10],
+        ['c', 10],
+      ]),
+    ]
+    const mappedFileSystem = mapFileSystem(instructions)
+
+    expect(getFolderSize('/', mappedFileSystem)).toBe(90)
+  })
+})
+
+describe('sumOfValidFolders', () => {
+  it('sums the size of valid folders', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [
+        ['f', 29116],
+        ['g', 2557],
+        ['h.lst', 62596],
+        ['e', null],
+      ]),
+      new Cd('cd', 'e'),
+      new Ls('ls', [['i', 584]]),
+    ]
+
+    const mappedFileSystem = mapFileSystem(instructions)
+    expect(sumOfValidFolders(mappedFileSystem)).toBe(95437)
+  })
+})
+
+describe('sizeOfDirectoryToDelete', () => {
+  it('returns the smallest directory out of the directories eligible for deletion', () => {
+    const instructions = [
+      new Cd('cd', '/'),
+      new Ls('ls', [
+        ['a', null],
+        ['b.txt', 14848514],
+        ['c.dat', 8504156],
+        ['d', null],
+      ]),
+      new Cd('cd', 'a'),
+      new Ls('ls', [
+        ['f', 29116],
+        ['g', 2557],
+        ['h.lst', 62596],
+        ['e', null],
+      ]),
+      new Cd('cd', 'e'),
+      new Ls('ls', [['i', 584]]),
+      new Cd('cd', '/'),
+      new Cd('cd', 'd'),
+      new Ls('ls', [
+        ['j', 4060174],
+        [' d.log', 8033020],
+        ['d.ext', 5626152],
+        ['k', 7214296],
+      ]),
+    ]
+
+    const mappedFileSystem = mapFileSystem(instructions)
+    expect(sizeOfDirectoryToDelete(mappedFileSystem)).toBe(24933642)
   })
 })
