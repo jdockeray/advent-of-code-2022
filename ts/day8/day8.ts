@@ -71,66 +71,6 @@ const isRightVisisble = (
   return false
 }
 
-const getRightScenicScore = (
-  x: number,
-  y: number,
-  step: number = 0,
-  trees: string[]
-): number => {
-  if (x === trees[y].length - 1) return step
-  const current = parseInt(trees[y].charAt(x - step))
-  const right = parseInt(trees[y].charAt(x + 1))
-  if (current > right) {
-    return getRightScenicScore(x + 1, y, step + 1, trees)
-  }
-  return step + 1
-}
-
-const getLeftScenicScore = (
-  x: number,
-  y: number,
-  step: number = 0,
-  trees: string[]
-): number => {
-  if (x === 0) return step
-  const current = parseInt(trees[y].charAt(x - step))
-  const left = parseInt(trees[y].charAt(x - 1))
-  if (current > left) {
-    return getLeftScenicScore(x - 1, y, step + 1, trees)
-  }
-  return step + 1
-}
-
-const getTopScenicScore = (
-  x: number,
-  y: number,
-  step: number = 0,
-  trees: string[]
-): number => {
-  if (y === 0) return step
-  const current = parseInt(trees[y + step].charAt(x))
-  const top = parseInt(trees[y - 1].charAt(x))
-  if (current > top) {
-    return getTopScenicScore(x, y - 1, step + 1, trees)
-  }
-  return step + 1
-}
-
-const getBottomScenicScore = (
-  x: number,
-  y: number,
-  step: number = 0,
-  trees: string[]
-): number => {
-  if (y === trees.length - 1) return step
-  const current = parseInt(trees[y - step].charAt(x))
-  const bottom = parseInt(trees[y + 1].charAt(x))
-  if (current > bottom) {
-    return getBottomScenicScore(x, y + 1, step + 1, trees)
-  }
-  return step + 1
-}
-
 const isVisible = (x: number, y: number, trees: string[]): boolean => {
   return (
     isTopVisible(x, y, 0, trees) ||
@@ -170,23 +110,68 @@ export const getBestScore = (trees: string[]): number => {
   return bestScore
 }
 
-const pos = (n: number): number => {
-  if (n === 0) return 1
-  return n
-}
 export const getScenicScore = (
   x: number,
   y: number,
   trees: string[]
 ): number => {
-  const bottom = pos(getBottomScenicScore(x, y, 0, trees))
-  const top = pos(getTopScenicScore(x, y, 0, trees))
-  const left = pos(getLeftScenicScore(x, y, 0, trees))
-  const right = pos(getRightScenicScore(x, y, 0, trees))
+  const current = trees[y][x]
 
-  const validScores: number[] = [bottom, top, left, right]
-  if (isEdge(x, trees[0].length) || isEdge(y, trees.length)) return 0
-  return validScores.reduce((acc, cv) => acc * cv, 1)
+  // count down
+  let countDown = 0
+  let countDownEnded = false
+  for (let down = y + 1; down < trees.length; down++) {
+    if (!countDownEnded) {
+      const compare = trees[down][x]
+      countDown = countDown + 1
+
+      if (current <= compare) {
+        countDownEnded = true
+      }
+    }
+  }
+  // count up
+  let countUp = 0
+  let countUpEnded = false
+  for (let up = y - 1; up >= 0; up--) {
+    if (!countUpEnded) {
+      const compare = trees[up][x]
+      countUp = countUp + 1
+
+      if (current <= compare) {
+        countUpEnded = true
+      }
+    }
+  }
+
+  // count left
+  let countLeft = 0
+  let countLeftEnded = false
+  for (let left = x - 1; left >= 0; left--) {
+    if (!countLeftEnded) {
+      const compare = trees[y][left]
+      countLeft = countLeft + 1
+
+      if (current <= compare) {
+        countLeftEnded = true
+      }
+    }
+  }
+
+  // count right
+  let countRight = 0
+  let countRightEnded = false
+  for (let right = x + 1; right < trees[0].length; right++) {
+    if (!countRightEnded) {
+      const compare = trees[y][right]
+      countRight = countRight + 1
+
+      if (current <= compare) {
+        countRightEnded = true
+      }
+    }
+  }
+  return countDown * countUp * countLeft * countRight
 }
 
 if (process.env.NODE_ENV !== 'test') {

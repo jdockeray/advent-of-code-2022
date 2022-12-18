@@ -46,7 +46,7 @@ describe('count visible', () => {
   })
 })
 
-describe.only('scenic scores', () => {
+describe('scenic scores', () => {
   it('gets the scenic score', () => {
     const input = ['30373', '25512', '65332', '33549', '35390']
     expect(getScenicScore(2, 1, input)).toBe(4)
